@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload to Supabase</title>
+</head>
+<body>
+  <h2>Upload a File to Supabase Storage</h2>
+
+  <input type="file" id="fileInput" />
+  <button onclick="uploadFile()">Upload</button>
+
+  <p id="status"></p>
+
+  <!-- Load Supabase JS client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // Replace with your own Supabase project details
+    const SUPABASE_URL = 'https://your-project-id.supabase.co';
+    const SUPABASE_ANON_KEY = 'your-anon-key';
+    const BUCKET_NAME = 'uploads';
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const status = document.getElementById('status');
+
+      if (fileInput.files.length === 0) {
+        status.textContent = "Please select a file to upload.";
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const filePath = `${Date.now()}_${file.name}`;  // Unique name to avoid conflicts
+
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, file);
+
+      if (error) {
+        console.error('Upload error:', error);
+        status.textContent = "❌ Upload failed.";
+      } else {
+        console.log('Upload success:', data);
+        const { data: publicURLData } = supabase
+          .storage
+          .from(BUCKET_NAME)
+          .getPublicUrl(filePath);
+        status.textContent = `✅ File uploaded successfully! URL: ${publicURLData.publicUrl}`;
+      }
+    }
+  </script>
+</body>
+</html>
