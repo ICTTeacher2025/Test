@@ -1,71 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Upload to Supabase (Private Bucket)</title>
+  <meta charset="UTF-8">
+  <title>Upload to Supabase (Private Bucket)</title>
 </head>
 <body>
-<h2>Upload a File to Supabase (Private Bucket)</h2>
+  <h2>Upload to Supabase (Private Bucket)</h2>
 
-<input type="file" id="fileInput" />
-<button onclick="uploadFile()">Upload</button>
+  <input type="file" id="fileInput" />
+  <button onclick="uploadFile()">Upload</button>
 
-<p id="status"></p>
+  <p id="status"></p>
 
-<!-- Supabase client -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script>
-// Supabase credentials
-const SUPABASE_URL = 'https://cmqggcacudmfsdrpciwx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNtcWdnY2FjdWRtZnNkcnBjaXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDQzNzAsImV4cCI6MjA3MzUyMDM3MH0.VtvGAQ3gCDIYDkgwJZxrMNPf-W1qs8UVwqejp1I_CM8';
-const BUCKET_NAME = 'Test'; // Your private bucket name
+  <script>
+    const SUPABASE_URL = 'https://cmqggcacudmfsdrpciwx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNtcWdnY2FjdWRtZnNkcnBjaXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NDQzNzAsImV4cCI6MjA3MzUyMDM3MH0.VtvGAQ3gCDIYDkgwJZxrMNPf-W1qs8UVwqejp1I_CM8';
+    const BUCKET = 'Test';
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function uploadFile() {
-const fileInput = document.getElementById('fileInput');
-const status = document.getElementById('status');
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const status = document.getElementById('status');
 
-if (fileInput.files.length === 0) {
-status.textContent = "❗ Please select a file to upload.";
-return;
-}
+      if (!fileInput.files.length) {
+        status.textContent = 'Please select a file.';
+        return;
+      }
 
-const file = fileInput.files[0];
-const filePath = `${Date.now()}_${file.name}`;
+      const file = fileInput.files[0];
+      const filePath = `${Date.now()}_${file.name}`;
 
-status.textContent = "⏳ Uploading...";
+      status.textContent = 'Uploading...';
 
-// Upload file to private bucket
-const { data, error } = await supabase.storage
-.from(BUCKET_NAME)
-.upload(filePath, file);
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .upload(filePath, file);
 
-if (error) {
-console.error('Upload error:', error);
-status.textContent = "❌ Upload failed. Check console.";
-return;
-}
+      if (error) {
+        status.textContent = '❌ Upload failed. See console.';
+        console.error(error);
+        return;
+      }
 
-console.log('Upload success:', data);
+      // Generate signed URL
+      const { data: signedURL, error: urlError } = await supabase
+        .storage
+        .from(BUCKET)
+        .createSignedUrl(filePath, 3600); // valid for 1 hour
 
-// Generate signed URL (valid for 1 hour = 3600 seconds)
-const { data: signedURLData, error: signedURLError } = await supabase
-.storage
-.from(BUCKET_NAME)
-.createSignedUrl(filePath, 3600);
+      if (urlError) {
+        status.textContent = '✅ Uploaded, but failed to create link.';
+        console.error(urlError);
+        return;
+      }
 
-if (signedURLError) {
-console.error('Signed URL error:', signedURLError);
-status.textContent = "❌ Upload succeeded but couldn't create signed URL.";
-return;
-}
-
-const fileUrl = signedURLData.signedUrl;
-
-status.innerHTML = `✅ Upload successful!<br><a href="${fileUrl}" target="_blank">Open File (valid for 1 hour)</a>`;
-}
-</script>
+      status.innerHTML = `✅ Upload successful.<br><a href="${signedURL.signedUrl}" target="_blank">Open File</a>`;
+    }
+  </script>
 </body>
 </html>
